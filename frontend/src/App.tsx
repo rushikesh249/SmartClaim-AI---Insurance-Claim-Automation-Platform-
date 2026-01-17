@@ -10,6 +10,7 @@ import { Policies } from "@/pages/dashboard/Policies"
 import { Claims } from "@/pages/dashboard/Claims"
 import { Settings } from "@/pages/dashboard/Settings"
 import { ClaimDetail } from "@/pages/dashboard/ClaimDetail"
+import { Documents } from "@/pages/dashboard/Documents"
 
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute"
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="policies" element={<Policies />} />
             <Route path="claims" element={<Claims />} />
             <Route path="claims/:claimId" element={<ClaimDetail />} />
+            <Route path="documents" element={<Documents />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Route>

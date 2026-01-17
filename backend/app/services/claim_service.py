@@ -80,6 +80,18 @@ def get_claim_for_user(db: Session, current_user: User, claim_id: UUID) -> Claim
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Claim not found"
         )
+    
+    # Calculate readiness score if not already calculated
+    if claim.readiness_score is None:
+        from app.services.readiness_service import calculate_readiness_score
+        claim.readiness_score = calculate_readiness_score(db, claim_id)
+    
+    # Calculate fraud score if not already calculated
+    if claim.fraud_score is None:
+        from app.services.fraud_service import calculate_fraud_score
+        fraud_result = calculate_fraud_score(db, claim)
+        claim.fraud_score = fraud_result.get("fraud_score", 0)
+    
     return claim
 
 def update_claim_draft_only(db: Session, current_user: User, claim_id: UUID, payload: ClaimUpdateRequest) -> Claim:

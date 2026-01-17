@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException, status
 from uuid import UUID
 from typing import List
+import magic
 
 from app.models.user import User
 from app.models.claim import Claim
@@ -20,6 +21,8 @@ def upload_document(
     document_type: str, 
     file: UploadFile
 ) -> Document:
+    # 0. Validate file before processing
+    _validate_uploaded_file(file)
     # 1. Verify claim ownership
     claim = db.query(Claim).filter(Claim.id == claim_id, Claim.user_id == current_user.id).first()
     if not claim:
@@ -114,3 +117,47 @@ def list_documents_for_claim(db: Session, current_user: User, claim_id: UUID) ->
         raise HTTPException(status_code=404, detail="Claim not found")
         
     return db.query(Document).filter(Document.claim_id == claim_id).all()
+
+
+def _validate_uploaded_file(file: UploadFile) -> None:
+    """
+    Validate uploaded file for security and compliance.
+    """
+    # Check file size (max 10MB)
+    if file.size and file.size > 10 * 1024 * 1024:  # 10MB
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size exceeds 10MB limit"
+        )
+    
+    # Check file type
+    allowed_types = {
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    }
+    
+    # Detect MIME type using python-magic
+    try:
+        # Read first chunk to detect MIME type
+        file.file.seek(0)
+        first_chunk = file.file.read(1024)
+        file.file.seek(0)  # Reset for actual processing
+        
+        mime_type = magic.from_buffer(first_chunk, mime=True)
+        
+        if mime_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file type: {mime_type}. Allowed types: PDF, JPG, PNG, DOC, DOCX"
+            )
+    except Exception:
+        # Fallback to content-type header if magic detection fails
+        if file.content_type and file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file type: {file.content_type}"
+            )

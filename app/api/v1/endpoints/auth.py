@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.auth import RegisterRequest, TokenResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
 from app.schemas.user import UserResponse
 from app.models.user import User
 from app.utils.security import hash_password, verify_password, create_access_token
@@ -72,21 +72,20 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: LoginRequest,
     db: Session = Depends(get_db)
 ) -> TokenResponse:
     """
     Login with phone and password.
 
-    Swagger Authorize sends:
-    - username = phone
-    - password = password
+    - **phone**: Phone number used during registration
+    - **password**: Password
 
     Returns JWT access token upon successful authentication.
     """
 
-    phone = form_data.username
-    password = form_data.password
+    phone = request.phone
+    password = request.password
 
     # Find user by phone
     user = db.query(User).filter(User.phone == phone).first()

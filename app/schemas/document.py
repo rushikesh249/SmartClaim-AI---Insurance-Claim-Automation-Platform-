@@ -12,6 +12,9 @@ class DocumentUploadResponse(BaseModel):
     quality_score: int
     is_duplicate: bool
     created_at: datetime
+    file_name: str
+    file_size: int
+    mime_type: str
     
     model_config = ConfigDict(from_attributes=True)
 

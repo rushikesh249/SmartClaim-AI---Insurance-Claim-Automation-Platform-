@@ -19,13 +19,39 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# Configure CORS (allow all for development)
+# Configure CORS for development and production
+# Development origins
+DEV_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Production origins (to be configured via environment)
+PROD_ORIGINS = []
+
+# Determine allowed origins based on environment
+if settings.DEBUG:
+    ALLOWED_ORIGINS = DEV_ORIGINS
+else:
+    # In production, you can set PROD_ORIGINS via environment variable
+    # For now, keeping it restrictive
+    ALLOWED_ORIGINS = PROD_ORIGINS
+
+# Apply CORS middleware with proper configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=[
+        "*",  # Allow all headers
+    ],
+    expose_headers=["Content-Disposition", "Content-Length", "Content-Type"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
 
 
@@ -58,7 +84,7 @@ async def root() -> dict:
     }
 
 
-# Include API v1 router
+# Include API v1 router AFTER CORS middleware
 app.include_router(api_router, prefix=settings.API_PREFIX)
 
 logger.info("Application initialized successfully")

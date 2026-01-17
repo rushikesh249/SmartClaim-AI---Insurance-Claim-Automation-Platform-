@@ -20,16 +20,21 @@ const policyLinkSchema = z.object({
     policy_number: z.string().min(1, "Policy number is required"),
     policy_type: z.enum(["health", "motor"]),
     insurer_name: z.string().min(1, "Insurer name is required"),
-    sum_insured: z.string().min(1, "Sum insured is required"),
-    premium_amount: z.string().optional(),
+    sum_insured: z.union([z.string(), z.number()]).transform(v => String(v)),
+    premium_amount: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
     start_date: z.string().min(1, "Start date is required"),
     end_date: z.string().min(1, "End date is required"),
 });
 
 // Define the transformed type
-interface PolicyLinkFormData extends z.infer<typeof policyLinkSchema> {
-    sum_insured: string;
-    premium_amount?: string;
+interface PolicyLinkFormData {
+    policy_number: string;
+    policy_type: 'health' | 'motor';
+    insurer_name: string;
+    sum_insured: string | number;
+    premium_amount?: string | number;
+    start_date: string;
+    end_date: string;
 }
 
 interface TransformedPolicyLinkData {
@@ -72,9 +77,13 @@ export function Policies() {
     const onSubmit = async (formData: PolicyLinkFormData) => {
         try {
             const transformedData: TransformedPolicyLinkData = {
-                ...formData,
+                policy_number: formData.policy_number,
+                policy_type: formData.policy_type,
+                insurer_name: formData.insurer_name,
                 sum_insured: Number(formData.sum_insured),
                 premium_amount: formData.premium_amount ? Number(formData.premium_amount) : undefined,
+                start_date: formData.start_date,
+                end_date: formData.end_date,
             };
             
             const response = await policyApi.linkPolicy(transformedData);
@@ -162,9 +171,11 @@ export function Policies() {
                                 <Label htmlFor="sum_insured">Sum Insured *</Label>
                                 <Input
                                     id="sum_insured"
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
+                                    pattern="[0-9]+([\.][0-9]+)?"
                                     placeholder="Enter sum insured"
-                                    {...register("sum_insured", { valueAsNumber: true })}
+                                    {...register("sum_insured")}
                                 />
                                 {errors.sum_insured && (
                                     <p className="text-sm text-red-500">{errors.sum_insured.message}</p>
@@ -175,9 +186,11 @@ export function Policies() {
                                 <Label htmlFor="premium_amount">Premium Amount</Label>
                                 <Input
                                     id="premium_amount"
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
+                                    pattern="[0-9]+([\.][0-9]+)?"
                                     placeholder="Enter premium amount"
-                                    {...register("premium_amount", { valueAsNumber: true })}
+                                    {...register("premium_amount")}
                                 />
                             </div>
                             

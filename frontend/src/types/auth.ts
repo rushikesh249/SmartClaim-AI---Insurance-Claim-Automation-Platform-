@@ -1,9 +1,10 @@
 export interface User {
-    id: number;
-    email: string;
-    full_name: string;
-    is_active: boolean;
-    is_superuser: boolean;
+    id: string; // UUID as string
+    name: string;
+    phone: string;
+    email?: string;
+    language_preference: string;
+    created_at: string; // ISO date string
 }
 
 export interface AuthResponse {

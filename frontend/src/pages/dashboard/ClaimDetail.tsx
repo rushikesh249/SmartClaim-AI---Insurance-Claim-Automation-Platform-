@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ArrowLeft, FileText, Calendar, DollarSign, Shield, AlertTriangle, CheckCircle, XCircle, Upload, Download, Send } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, DollarSign, Shield, AlertTriangle, CheckCircle, XCircle, Upload, Download, Send, Eye } from "lucide-react";
 import { claimApi } from "@/api/claim";
 import { policyApi } from "@/api/policy";
 import { documentApi } from "@/api/document";
@@ -184,6 +184,7 @@ export function ClaimDetail() {
   };
 
   const formatFileSize = (bytes: number): string => {
+    if (typeof bytes !== 'number' || isNaN(bytes) || bytes <= 0) return 'Size unknown';
     if (bytes < 1024) return bytes + ' bytes';
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     else return (bytes / 1048576).toFixed(1) + ' MB';
@@ -195,6 +196,51 @@ export function ClaimDetail() {
     if (mimeType.includes('word') || mimeType.includes('msword')) return '📝';
     if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
     return '📁';
+  };
+
+  const handleDocumentView = (doc: DocumentResponse) => {
+    try {
+      // Open file in new tab for preview using the files endpoint
+      const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/v1/files/${encodeURIComponent(doc.file_path)}`;
+      window.open(url, '_blank');
+      
+      toast.success('Opening document in new tab');
+    } catch (error) {
+      console.error('View error:', error);
+      toast.error('Failed to open document');
+    }
+  };
+
+  const handleDocumentDownload = async (doc: DocumentResponse) => {
+    try {
+      // Use the axios client to make a request with proper authentication
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/v1/files/${encodeURIComponent(doc.file_path)}?download=true`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Access denied or file not found');
+      }
+      
+      // Create blob from response and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.file_name || doc.file_path.split('/').pop() || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('File downloaded successfully');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Access denied or file missing');
+    }
   };
 
   if (loading) {
@@ -386,12 +432,29 @@ export function ClaimDetail() {
                         <span className="mr-2 text-lg">{getDocumentIcon(doc.mime_type || "")}</span>
                         <div>
                           <p className="font-medium truncate max-w-xs">{doc.file_name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground">{formatFileSize(doc.file_size || 0)}</p>
+                          <p className="text-xs text-muted-foreground">{doc.file_size ? formatFileSize(doc.file_size) : 'Size unknown'}</p>
                         </div>
                       </div>
-                      <Badge variant="secondary" className="capitalize">
-                        {doc.is_duplicate ? "duplicate" : "uploaded"}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="capitalize">
+                          {doc.is_duplicate ? "duplicate" : "uploaded"}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDocumentView(doc)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleDocumentDownload(doc)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

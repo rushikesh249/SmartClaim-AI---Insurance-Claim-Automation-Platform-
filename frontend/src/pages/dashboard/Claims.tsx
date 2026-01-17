@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { FileText, Plus, Calendar, DollarSign, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { claimApi } from "@/api/claim";
 import { policyApi } from "@/api/policy";
+import { getApiErrorMessage } from "@/lib/getApiErrorMessage";
 import type { ClaimResponse } from "@/types/claim";
 import type { PolicyResponse } from "@/types/policy";
 
@@ -24,11 +25,16 @@ const claimCreateSchema = z.object({
     incident_date: z.string().min(1, "Incident date is required"),
     incident_location: z.string().optional(),
     incident_description: z.string().optional(),
-    claimed_amount: z.string().min(1, "Claimed amount is required"),
+    claimed_amount: z.union([z.string(), z.number()]).transform(v => String(v)),
 });
 
-interface ClaimFormData extends z.infer<typeof claimCreateSchema> {
-    claimed_amount: string;
+interface ClaimFormData {
+    policy_id: string;
+    claim_type: 'health' | 'motor';
+    incident_date: string;
+    incident_location?: string;
+    incident_description?: string;
+    claimed_amount: string | number;
 }
 
 interface TransformedClaimData {
@@ -89,7 +95,8 @@ export function Claims() {
             toast.success("Claim created successfully");
         } catch (error) {
             console.error('Error creating claim:', error);
-            toast.error("Failed to create claim");
+            const errorMessage = getApiErrorMessage(error);
+            toast.error(errorMessage);
         } finally {
             setSubmitting(false);
         }
@@ -197,7 +204,9 @@ export function Claims() {
                                 <Label htmlFor="claimed_amount">Claimed Amount *</Label>
                                 <Input
                                     id="claimed_amount"
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
+                                    pattern="[0-9]+([\.][0-9]+)?"
                                     placeholder="Enter claimed amount"
                                     {...register("claimed_amount")}
                                 />

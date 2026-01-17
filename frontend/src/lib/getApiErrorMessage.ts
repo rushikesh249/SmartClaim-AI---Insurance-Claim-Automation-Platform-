@@ -25,6 +25,14 @@ export function getApiErrorMessage(error: any): string {
           fieldMessages[field] = 'Phone number is required';
         } else if (field === 'password') {
           fieldMessages[field] = 'Password is required';
+        } else if (field === 'incident_date') {
+          fieldMessages[field] = 'Incident date must be a valid date';
+        } else if (field === 'sum_insured') {
+          fieldMessages[field] = 'Sum insured must be a valid number';
+        } else if (field === 'premium_amount') {
+          fieldMessages[field] = 'Premium amount must be a valid number';
+        } else if (field === 'claimed_amount') {
+          fieldMessages[field] = 'Claimed amount must be a valid number';
         } else {
           fieldMessages[field] = msg;
         }

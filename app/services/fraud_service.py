@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 import collections
+from decimal import Decimal
 
 from app.models.claim import Claim
 from app.models.policy import Policy
@@ -31,7 +32,7 @@ def calculate_fraud_score(db: Session, claim: Claim) -> dict:
     # if claimed_amount > 0.8 * policy.sum_insured => +20
     policy = db.query(Policy).filter(Policy.id == claim.policy_id).first()
     if policy:
-        limit = policy.sum_insured * 0.8
+        limit = policy.sum_insured * Decimal("0.8")
         # Ensure conversion if needed, sqlalchemy usually handles Decimal comparison
         if claim.claimed_amount > limit:
             mod = 20

@@ -1,9 +1,16 @@
 import client from './client';
 import type { ClaimCreateRequest, ClaimUpdateRequest, ClaimResponse } from '@/types/claim';
+import { toIsoDateTime } from '@/lib/dateUtils';
 
 export const claimApi = {
   createClaim: async (payload: ClaimCreateRequest): Promise<ClaimResponse> => {
-    const response = await client.post<ClaimResponse>('/api/v1/claims/', payload);
+    // Transform the payload to ensure incident_date is in ISO datetime format
+    const transformedPayload = {
+      ...payload,
+      incident_date: toIsoDateTime(payload.incident_date)
+    };
+    
+    const response = await client.post<ClaimResponse>('/api/v1/claims/', transformedPayload);
     return response.data;
   },
 

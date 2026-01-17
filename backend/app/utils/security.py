@@ -5,6 +5,7 @@ from jose import JWTError, jwt
 
 from app.config import settings
 from app.utils.logger import setup_logger
+from pathlib import Path
 
 logger = setup_logger(__name__)
 
@@ -107,3 +108,52 @@ def decode_access_token(token: str) -> Dict[str, Any]:
     except JWTError as e:
         logger.error(f"JWT decode error: {str(e)}")
         raise
+
+
+def sanitize_phone(phone: str) -> str:
+    """
+    Sanitize phone number by removing non-digit characters.
+    
+    Args:
+        phone: Raw phone number string
+        
+    Returns:
+        Cleaned phone number containing only digits
+    """
+    if not phone:
+        return ""
+    
+    # Remove all non-digit characters
+    cleaned = "".join(char for char in phone if char.isdigit())
+    
+    # Validate length (should be 10-15 digits)
+    if len(cleaned) < 10 or len(cleaned) > 15:
+        raise ValueError("Phone number must be between 10 and 15 digits")
+    
+    return cleaned
+
+def sanitize_file_path(file_path: str) -> str:
+    """
+    Sanitize file path to prevent directory traversal attacks.
+    
+    Args:
+        file_path: Original file path
+        
+    Returns:
+        Sanitized file path
+        
+    Raises:
+        ValueError: If path traversal is detected
+    """
+    # Check for path traversal patterns
+    if '..' in file_path or '../' in file_path or file_path.startswith('../'):
+        raise ValueError("Path traversal detected")
+    
+    # Normalize path separators
+    normalized_path = file_path.replace('\\', '/')
+    
+    # Validate that path starts with uploads/
+    if not normalized_path.startswith('uploads/'):
+        raise ValueError("Invalid file path format")
+    
+    return normalized_path

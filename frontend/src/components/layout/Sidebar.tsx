@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, AlertCircle, Settings, Shield } from "lucide-react"
+import { LayoutDashboard, AlertCircle, Settings, Shield, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const sidebarItems = [
@@ -18,6 +18,11 @@ const sidebarItems = [
         title: "Claims",
         href: "/app/claims",
         icon: AlertCircle,
+    },
+    {
+        title: "Documents",
+        href: "/app/documents",
+        icon: FileText,
     },
     {
         title: "Settings",

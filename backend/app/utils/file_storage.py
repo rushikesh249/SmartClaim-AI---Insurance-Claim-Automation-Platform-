@@ -17,17 +17,34 @@ def save_upload_file(
     uploaded_file: UploadFile
 ) -> Tuple[str, str, str, int]:
     """
+    Save an uploaded file to the disk with security validation.
+    
+    Returns:
+        (file_path, file_name, mime_type, file_size)
+    """
+    """
     Save an uploaded file to the disk.
     
     Returns:
         (file_path, file_name, mime_type, file_size)
     """
+    # Validate claim_id to prevent path traversal
+    if not claim_id or ".." in str(claim_id) or "/" in str(claim_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid claim ID"
+        )
+    
     claim_dir = os.path.join(upload_dir, str(claim_id))
     ensure_upload_dir(claim_dir)
     
     original_filename = uploaded_file.filename or "unnamed_file"
-    # sanitize filename simple approach
+    # Sanitize filename to prevent path traversal and invalid characters
     original_filename = os.path.basename(original_filename)
+    # Remove dangerous characters
+    original_filename = "".join(c for c in original_filename if c.isalnum() or c in "._- ()[]")
+    if not original_filename:
+        original_filename = "unnamed_file"
     
     timestamp = int(datetime.utcnow().timestamp())
     file_name = f"{timestamp}_{original_filename}"
@@ -41,18 +58,10 @@ def save_upload_file(
         file_size = os.path.getsize(file_path)
         
         # Calculate relative path for storage
-        # We need the path relative to UPLOAD_DIR or just from 'uploads'
-        # Let's store relative to the app root or just 'uploads/...'
-        # User requirement: "Store path format: uploads/<claim_id>/<timestamp>_<original_filename>"
-        # Assuming UPLOAD_DIR is 'uploads' or absolute path ending in 'uploads'
-        
+        # Store path format: uploads/<claim_id>/<timestamp>_<original_filename>
+        # This ensures consistent format for file serving verification
+            
         relative_path = os.path.join("uploads", str(claim_id), file_name)
-        # Assuming 'uploads' is the folder name in root. 
-        # Ideally we should construct this based on settings.UPLOAD_DIR name.
-        # But hardcoding 'uploads' as per user format request if plausible.
-        
-        # Adjust relative path if settings.UPLOAD_DIR is deeper. 
-        # But generally we store the path we can use to serve or find it later.
         
         return relative_path, original_filename, uploaded_file.content_type or "application/octet-stream", file_size
         

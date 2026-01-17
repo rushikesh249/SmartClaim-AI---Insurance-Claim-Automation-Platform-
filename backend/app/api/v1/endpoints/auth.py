@@ -3,10 +3,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.auth import RegisterRequest, TokenResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
 from app.schemas.user import UserResponse
 from app.models.user import User
-from app.utils.security import hash_password, verify_password, create_access_token
+from app.utils.security import hash_password, verify_password, create_access_token, sanitize_phone
 from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -19,6 +19,8 @@ async def register(
     request: RegisterRequest,
     db: Session = Depends(get_db)
 ) -> TokenResponse:
+    # Sanitize phone number
+    clean_phone = sanitize_phone(request.phone)
     """
     Register a new user.
 
@@ -31,9 +33,9 @@ async def register(
     """
 
     # Check if phone already exists
-    existing_user = db.query(User).filter(User.phone == request.phone).first()
+    existing_user = db.query(User).filter(User.phone == clean_phone).first()
     if existing_user:
-        logger.warning(f"Registration attempt with existing phone: {request.phone}")
+        logger.warning(f"Registration attempt with existing phone: {clean_phone}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Phone number already registered"
@@ -45,7 +47,7 @@ async def register(
     # Create new user
     new_user = User(
         name=request.name,
-        phone=request.phone,
+        phone=clean_phone,
         email=request.email,
         password_hash=password_hash,
         language_preference="en"  # Default language
@@ -72,27 +74,27 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: LoginRequest,
     db: Session = Depends(get_db)
 ) -> TokenResponse:
+    # Sanitize phone number
+    clean_phone = sanitize_phone(request.phone)
     """
     Login with phone and password.
 
-    Swagger Authorize sends:
-    - username = phone
-    - password = password
+    - **phone**: Phone number used during registration
+    - **password**: Password
 
     Returns JWT access token upon successful authentication.
     """
 
-    phone = form_data.username
-    password = form_data.password
+    password = request.password
 
     # Find user by phone
-    user = db.query(User).filter(User.phone == phone).first()
+    user = db.query(User).filter(User.phone == clean_phone).first()
 
     if not user:
-        logger.warning(f"Login attempt with non-existent phone: {phone}")
+        logger.warning(f"Login attempt with non-existent phone: {clean_phone}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid phone or password",
